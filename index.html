@@ -475,8 +475,8 @@ function markNumberUsed(){
   if(!isNaN(n)) safeSet("kwps_last_qno", String(n));
 }
 function fileName(){
-  const c = ($("client").value || "client").trim().replace(/[\\/:*?"<>|]+/g,"").slice(0,30);
-  return `Quotation_${$("qno").value}_${c}.pdf`;
+  const c = ($("client").value || "").trim().replace(/[\\/:*?"<>|]+/g,"").replace(/\s+/g," ").slice(0,60);
+  return c ? `KWPS Quotation ${c}.pdf` : "KWPS Quotation.pdf";
 }
 
 function advanceNumber(){ $("qno").value = nextQuotationNo(); render(); }
@@ -524,13 +524,19 @@ async function downloadPdfFile(btns){
     if(document.fonts && document.fonts.ready) await document.fonts.ready;
     await ensureLibs();
     const pg = $("page");
+    const W = pg.offsetWidth, H = pg.offsetHeight;
     const canvas = await html2canvas(pg, {
       scale: 3, useCORS: true, backgroundColor: "#ffffff", logging: false,
-      width: pg.offsetWidth, height: pg.offsetHeight,
-      windowWidth: pg.offsetWidth, scrollX: 0, scrollY: -window.scrollY,
+      width: W, height: H, windowWidth: W, windowHeight: H,
+      x: 0, y: 0, scrollX: 0, scrollY: 0,
       onclone: doc => {
-        const c = doc.getElementById("page"); c.style.transform = "none";
-        const w = doc.getElementById("wrap"); w.style.width = c.offsetWidth+"px"; w.style.height = c.offsetHeight+"px";
+        // show only the A4 page, at the very top-left of the cloned document
+        const hide = q => doc.querySelectorAll(q).forEach(e=>e.style.display="none");
+        hide(".panel"); hide(".bar");
+        const b = doc.body; b.style.display="block"; b.style.padding="0"; b.style.margin="0"; b.style.minHeight="0"; b.style.background="#fff";
+        const st = doc.getElementById("stage"); st.style.padding="0"; st.style.display="block"; st.style.overflow="visible";
+        const w = doc.getElementById("wrap"); w.style.width=W+"px"; w.style.height=H+"px"; w.style.position="relative";
+        const c = doc.getElementById("page"); c.style.transform="none"; c.style.margin="0"; c.style.boxShadow="none";
       }
     });
     const pdf = new window.jspdf.jsPDF({unit:"mm", format:"a4", orientation:"portrait"});
