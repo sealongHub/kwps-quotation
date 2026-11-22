@@ -152,14 +152,12 @@ input:disabled{background:#eceff6;color:#98a0b5}
   <fieldset>
     <legend>Client</legend>
     <label for="client">Client name</label>
-    <input id="client" value="ម្ចាស់ផ្ទះល្វែង យូ ទូល័ស">
+    <input id="client" value="" placeholder="ឈ្មោះអតិថិជន">
     <label for="address">Address</label>
-    <textarea id="address">ផ្ទះលេខ49 ផ្លូវលេខ ២៦៩,
-សង្កាត់ទឹកល្អក់៣,
-ខណ្ឌទួលគោក, រាជធានីភ្នំពេញ។</textarea>
+    <textarea id="address" placeholder="អាសយដ្ឋាន"></textarea>
     <div class="row">
-      <div><label for="phone">Phone</label><input id="phone" value="012 971 686"></div>
-      <div><label for="location">Location</label><input id="location" value="ផ្ទះល្វែង"></div>
+      <div><label for="phone">Phone</label><input id="phone" value="" placeholder="012 xxx xxx"></div>
+      <div><label for="location">Location</label><input id="location" value="" placeholder="ទីតាំង"></div>
     </div>
   </fieldset>
 
@@ -184,20 +182,20 @@ input:disabled{background:#eceff6;color:#98a0b5}
   <fieldset>
     <legend>Day shift</legend>
     <label for="dayTime">Time</label>
-    <input id="dayTime" value="6:00-18:00">
+    <input id="dayTime" value="" placeholder="6:00-18:00">
     <div class="row">
       <div><label for="dayPax">Guards (PAX)</label><select id="dayPax"></select></div>
-      <div><label for="dayPrice">Price per guard (USD)</label><input type="number" id="dayPrice" min="0" step="0.01" value="250" list="prices"></div>
+      <div><label for="dayPrice">Price per guard (USD)</label><input type="number" id="dayPrice" min="0" step="0.01" value="" placeholder="0.00" list="prices"></div>
     </div>
   </fieldset>
 
   <fieldset>
     <legend>Night shift</legend>
     <label for="nightTime">Time</label>
-    <input id="nightTime" value="18:00-6:00">
+    <input id="nightTime" value="" placeholder="18:00-6:00">
     <div class="row">
       <div><label for="nightPax">Guards (PAX)</label><select id="nightPax"></select></div>
-      <div><label for="nightPrice">Price per guard (USD)</label><input type="number" id="nightPrice" min="0" step="0.01" value="250" list="prices"></div>
+      <div><label for="nightPrice">Price per guard (USD)</label><input type="number" id="nightPrice" min="0" step="0.01" value="" placeholder="0.00" list="prices"></div>
     </div>
   </fieldset>
   <datalist id="prices"><option value="200"><option value="220"><option value="250"><option value="280"><option value="300"><option value="350"></datalist>
@@ -205,7 +203,7 @@ input:disabled{background:#eceff6;color:#98a0b5}
   <fieldset>
     <legend>Notes</legend>
     <label for="notes">One note per line</label>
-    <textarea id="notes">Please payment every end of month.</textarea>
+    <textarea id="notes" placeholder="Please payment every end of month."></textarea>
   </fieldset>
 
   <fieldset>
@@ -215,9 +213,9 @@ input:disabled{background:#eceff6;color:#98a0b5}
 
   <div class="desk">
     <button class="btn-main" data-act="pdf">Download PDF (A4)</button>
-    <button class="btn-alt" data-act="print">Print / Save as PDF</button>
+    <button class="btn-alt" data-act="print">Print / Save as PDF (editable text)</button>
   </div>
-  <p class="hint">Download PDF opens the print window: set <b>Destination = Save as PDF</b>, <b>Margins = None</b>, turn off <b>Headers and footers</b>, then Save. The PDF has real text (sharp, selectable, editable).</p>
+  <p class="hint"><b>Download PDF</b>: on a phone/tablet it saves an A4 PDF file straight away (high-quality image). On a computer it opens the print window: set <b>Save as PDF</b>, <b>Margins = None</b>, turn off <b>Headers and footers</b> (real text, selectable/editable). <b>Print / Save as PDF</b> always gives the real-text version.</p>
 </aside>
 
 <div class="bar">
@@ -369,7 +367,7 @@ function safeSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
   for(let i=0;i<=20;i++){ s.add(new Option(i,i)); }
 });
 $("dayPax").value = 0;
-$("nightPax").value = 1;
+$("nightPax").value = 0;
 
 function nextQuotationNo(){
   const last = parseInt(safeGet("kwps_last_qno") || "0", 10);
@@ -504,7 +502,53 @@ function printAsPdf(){
   (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(go);
 }
 bindAct("print", printAsPdf);
-bindAct("pdf", printAsPdf);
+
+/* ---- Direct A4 PDF download (works on every phone / tablet) ---- */
+const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+                  (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const t=document.createElement("script"); t.src=src; t.onload=res;
+    t.onerror=()=>rej(new Error("Cannot load "+src)); document.head.appendChild(t);
+  });
+}
+async function ensureLibs(){
+  if(!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+  if(!(window.jspdf && window.jspdf.jsPDF)) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+}
+async function downloadPdfFile(btns){
+  const labels = btns.map(b=>b.textContent);
+  btns.forEach(b=>{ b.disabled=true; b.textContent="Please wait..."; });
+  try{
+    render(); markNumberUsed();
+    if(document.fonts && document.fonts.ready) await document.fonts.ready;
+    await ensureLibs();
+    const pg = $("page");
+    const canvas = await html2canvas(pg, {
+      scale: 3, useCORS: true, backgroundColor: "#ffffff", logging: false,
+      width: pg.offsetWidth, height: pg.offsetHeight,
+      windowWidth: pg.offsetWidth, scrollX: 0, scrollY: -window.scrollY,
+      onclone: doc => {
+        const c = doc.getElementById("page"); c.style.transform = "none";
+        const w = doc.getElementById("wrap"); w.style.width = c.offsetWidth+"px"; w.style.height = c.offsetHeight+"px";
+      }
+    });
+    const pdf = new window.jspdf.jsPDF({unit:"mm", format:"a4", orientation:"portrait"});
+    pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
+    pdf.save(fileName());
+    advanceNumber();
+  }catch(err){
+    console.error(err);
+    alert("Cannot create the PDF file directly (check internet connection). Opening the print window instead.");
+    printAsPdf();
+  }finally{
+    btns.forEach((b,i)=>{ b.disabled=false; b.textContent=labels[i]; });
+  }
+}
+bindAct("pdf", ()=>{
+  if(IS_MOBILE){ downloadPdfFile([...document.querySelectorAll('[data-act="pdf"]')]); }
+  else printAsPdf();
+});
 
 /* ============ Fit A4 preview to any screen width ============ */
 function fitPage(){
