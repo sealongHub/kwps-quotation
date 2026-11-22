@@ -183,8 +183,8 @@ input:disabled{background:#eceff6;color:#98a0b5}
     <legend>Day shift</legend>
     <label for="dayTime">Time</label>
     <select id="dayTime">
-      <option value="5:00 AM - 5:00 PM">5:00 AM - 5:00 PM</option>
-      <option value="6:00 AM - 6:00 PM" selected>6:00 AM - 6:00 PM</option>
+      <option value="5:00 AM - 17:00">5:00 AM - 17:00</option>
+      <option value="6:00 AM - 18:00" selected>6:00 AM - 18:00</option>
     </select>
     <div class="row">
       <div><label for="dayPax">Guards (PAX)</label><select id="dayPax"></select></div>
@@ -196,8 +196,8 @@ input:disabled{background:#eceff6;color:#98a0b5}
     <legend>Night shift</legend>
     <label for="nightTime">Time</label>
     <select id="nightTime">
-      <option value="5:00 PM - 5:00 AM">5:00 PM - 5:00 AM</option>
-      <option value="6:00 PM - 6:00 AM" selected>6:00 PM - 6:00 AM</option>
+      <option value="17:00 - 5:00 AM">17:00 - 5:00 AM</option>
+      <option value="18:00 - 6:00 AM" selected>18:00 - 6:00 AM</option>
     </select>
     <div class="row">
       <div><label for="nightPax">Guards (PAX)</label><select id="nightPax"></select></div>
@@ -504,8 +504,8 @@ function printAsPdf(){
     advanceNumber();
   };
   window.addEventListener("afterprint", finish);
-  const go = ()=>{ window.print(); setTimeout(finish, 1500); };
-  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(go);
+  window.print();
+  setTimeout(finish, 1500);
 }
 bindAct("print", printAsPdf);
 bindAct("pdf", printAsPdf);
