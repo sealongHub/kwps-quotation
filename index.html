@@ -182,7 +182,10 @@ input:disabled{background:#eceff6;color:#98a0b5}
   <fieldset>
     <legend>Day shift</legend>
     <label for="dayTime">Time</label>
-    <input id="dayTime" value="" placeholder="6:00-18:00">
+    <select id="dayTime">
+      <option value="5:00 AM - 5:00 PM">5:00 AM - 5:00 PM</option>
+      <option value="6:00 AM - 6:00 PM" selected>6:00 AM - 6:00 PM</option>
+    </select>
     <div class="row">
       <div><label for="dayPax">Guards (PAX)</label><select id="dayPax"></select></div>
       <div><label for="dayPrice">Price per guard (USD)</label><input type="number" id="dayPrice" min="0" step="0.01" value="" placeholder="0.00" list="prices"></div>
@@ -192,7 +195,10 @@ input:disabled{background:#eceff6;color:#98a0b5}
   <fieldset>
     <legend>Night shift</legend>
     <label for="nightTime">Time</label>
-    <input id="nightTime" value="" placeholder="18:00-6:00">
+    <select id="nightTime">
+      <option value="5:00 PM - 5:00 AM">5:00 PM - 5:00 AM</option>
+      <option value="6:00 PM - 6:00 AM" selected>6:00 PM - 6:00 AM</option>
+    </select>
     <div class="row">
       <div><label for="nightPax">Guards (PAX)</label><select id="nightPax"></select></div>
       <div><label for="nightPrice">Price per guard (USD)</label><input type="number" id="nightPrice" min="0" step="0.01" value="" placeholder="0.00" list="prices"></div>
@@ -203,7 +209,7 @@ input:disabled{background:#eceff6;color:#98a0b5}
   <fieldset>
     <legend>Notes</legend>
     <label for="notes">One note per line</label>
-    <textarea id="notes" placeholder="Please payment every end of month."></textarea>
+    <textarea id="notes">Please payment every end of month.</textarea>
   </fieldset>
 
   <fieldset>
@@ -212,15 +218,15 @@ input:disabled{background:#eceff6;color:#98a0b5}
   </fieldset>
 
   <div class="desk">
-    <button class="btn-main" data-act="pdf">Download PDF (A4)</button>
-    <button class="btn-alt" data-act="print">Print / Save as PDF (editable text)</button>
+    <button class="btn-main" data-act="pdf">Generate PDF (A4)</button>
+    <button class="btn-alt" data-act="print">Print</button>
   </div>
-  <p class="hint"><b>Download PDF</b>: on a phone/tablet it saves an A4 PDF file straight away (high-quality image). On a computer it opens the print window: set <b>Save as PDF</b>, <b>Margins = None</b>, turn off <b>Headers and footers</b> (real text, selectable/editable). <b>Print / Save as PDF</b> always gives the real-text version.</p>
+  <p class="hint"><b>Generate PDF</b> opens your device's print dialog with a client-based filename. Choose <b>Save as PDF</b> for a sharp, selectable-text PDF.</p>
 </aside>
 
 <div class="bar">
   <button class="btn-alt" data-act="view">Preview</button>
-  <button class="btn-main" data-act="pdf">Download PDF</button>
+  <button class="btn-main" data-act="pdf">Generate PDF</button>
   <button class="btn-alt" data-act="print">Print</button>
 </div>
 
@@ -476,7 +482,7 @@ function markNumberUsed(){
 }
 function fileName(){
   const c = ($("client").value || "").trim().replace(/[\\/:*?"<>|]+/g,"").replace(/\s+/g," ").slice(0,60);
-  return c ? `KWPS Quotation ${c}.pdf` : "KWPS Quotation.pdf";
+  return c ? `KWPS Quotation_${c}.pdf` : "KWPS Quotation.pdf";
 }
 
 function advanceNumber(){ $("qno").value = nextQuotationNo(); render(); }
@@ -502,59 +508,7 @@ function printAsPdf(){
   (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(go);
 }
 bindAct("print", printAsPdf);
-
-/* ---- Direct A4 PDF download (works on every phone / tablet) ---- */
-const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
-                  (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
-function loadScript(src){
-  return new Promise((res,rej)=>{
-    const t=document.createElement("script"); t.src=src; t.onload=res;
-    t.onerror=()=>rej(new Error("Cannot load "+src)); document.head.appendChild(t);
-  });
-}
-async function ensureLibs(){
-  if(!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
-  if(!(window.jspdf && window.jspdf.jsPDF)) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
-}
-async function downloadPdfFile(btns){
-  const labels = btns.map(b=>b.textContent);
-  btns.forEach(b=>{ b.disabled=true; b.textContent="Please wait..."; });
-  try{
-    render(); markNumberUsed();
-    if(document.fonts && document.fonts.ready) await document.fonts.ready;
-    await ensureLibs();
-    const pg = $("page");
-    const W = pg.offsetWidth, H = pg.offsetHeight;
-    const canvas = await html2canvas(pg, {
-      scale: 3, useCORS: true, backgroundColor: "#ffffff", logging: false,
-      width: W, height: H, windowWidth: W, windowHeight: H,
-      x: 0, y: 0, scrollX: 0, scrollY: 0,
-      onclone: doc => {
-        // show only the A4 page, at the very top-left of the cloned document
-        const hide = q => doc.querySelectorAll(q).forEach(e=>e.style.display="none");
-        hide(".panel"); hide(".bar");
-        const b = doc.body; b.style.display="block"; b.style.padding="0"; b.style.margin="0"; b.style.minHeight="0"; b.style.background="#fff";
-        const st = doc.getElementById("stage"); st.style.padding="0"; st.style.display="block"; st.style.overflow="visible";
-        const w = doc.getElementById("wrap"); w.style.width=W+"px"; w.style.height=H+"px"; w.style.position="relative";
-        const c = doc.getElementById("page"); c.style.transform="none"; c.style.margin="0"; c.style.boxShadow="none";
-      }
-    });
-    const pdf = new window.jspdf.jsPDF({unit:"mm", format:"a4", orientation:"portrait"});
-    pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
-    pdf.save(fileName());
-    advanceNumber();
-  }catch(err){
-    console.error(err);
-    alert("Cannot create the PDF file directly (check internet connection). Opening the print window instead.");
-    printAsPdf();
-  }finally{
-    btns.forEach((b,i)=>{ b.disabled=false; b.textContent=labels[i]; });
-  }
-}
-bindAct("pdf", ()=>{
-  if(IS_MOBILE){ downloadPdfFile([...document.querySelectorAll('[data-act="pdf"]')]); }
-  else printAsPdf();
-});
+bindAct("pdf", printAsPdf);
 
 /* ============ Fit A4 preview to any screen width ============ */
 function fitPage(){
